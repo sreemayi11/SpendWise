@@ -1,0 +1,531 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpendWise | Personal Finance</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6fa;color:#172033}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0;border-radius:8px;padding:11px 15px}
+button:disabled{opacity:.6;cursor:wait}
+.primary{background:#18794e;color:white}
+.secondary{background:#e8edf5;color:#172033}
+.danger{background:#fee2e2;color:#991b1b}
+.layout{display:flex;min-height:100vh}
+aside{width:225px;flex-shrink:0;background:#172b4d;color:white;padding:26px 18px}
+.brand{font-size:24px;font-weight:bold;margin-bottom:35px}
+.nav-item{padding:13px;border-radius:8px;margin-bottom:8px}
+.nav-item.active{background:#294369}
+aside p{color:#cbd5e1;font-size:13px;line-height:1.5}
+main{flex:1;min-width:0;padding:30px}
+header{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:24px}
+h1{font-size:28px;margin:0 0 8px}
+h2{font-size:19px;margin:0 0 20px}
+.muted{color:#6b7280;font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:22px}
+.card,.panel{background:white;padding:22px;border-radius:13px;box-shadow:0 3px 14px #1720330a}
+.card p{margin:0 0 12px;color:#6b7280}
+.amount{font-size:26px;font-weight:bold;overflow-wrap:anywhere}
+.panel{margin-bottom:22px}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+label{display:block;font-size:14px;margin-bottom:7px}
+input,select{width:100%;padding:12px;border:1px solid #d7dce5;border-radius:8px;background:white}
+.form-actions{display:flex;gap:9px;margin-top:18px;flex-wrap:wrap}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;text-align:left}
+th,td{padding:14px 10px;border-bottom:1px solid #edf0f5}
+th{color:#6b7280;font-size:13px}
+td{font-size:14px}
+.actions{display:flex;gap:7px}
+.actions button{padding:8px 10px;font-size:12px}
+#message,#auth-message{margin:14px 0 0;font-size:14px}
+.success{color:#18794e}
+.error{color:#b42318}
+.auth-wrap{max-width:430px;margin:50px auto}
+.auth-tabs{display:flex;gap:8px;margin-bottom:18px}
+.auth-tabs button{flex:1}
+.hidden{display:none!important}
+.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.summary-header{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}
+.summary-header h2{margin:0}
+.month-picker{max-width:190px}
+.category-list{display:grid;gap:14px}
+.category-row{display:grid;grid-template-columns:minmax(90px,140px) 1fr auto;gap:12px;align-items:center;font-size:14px}
+.bar-track{height:10px;background:#edf0f5;border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;background:#18794e;border-radius:999px}
+.empty{color:#6b7280;font-size:14px;padding:8px 0}
+@media(max-width:800px){
+aside{width:165px;padding:20px 12px}
+main{padding:20px}
+.cards{grid-template-columns:1fr}
+}
+@media(max-width:540px){
+.layout{display:block}
+aside{width:100%;padding:16px}
+.brand{margin-bottom:14px}
+.nav-item{display:inline-block;margin-bottom:0}
+main{padding:15px}
+.form-grid{grid-template-columns:1fr}
+.auth-wrap{margin:20px auto;padding:12px}
+.category-row{grid-template-columns:85px 1fr}
+.category-row .category-value{grid-column:2}
+}
+</style>
+</head>
+<body>
+
+<div id="auth-view" class="auth-wrap">
+<div class="panel">
+<h1>SpendWise</h1>
+<p class="muted">Your personal finance tracker</p>
+<div class="auth-tabs">
+<button id="login-tab" class="primary" type="button">Login</button>
+<button id="register-tab" class="secondary" type="button">Register</button>
+</div>
+<form id="auth-form">
+<div id="name-field" class="hidden" style="margin-bottom:15px">
+<label for="auth-name">Full name</label>
+<input id="auth-name" autocomplete="name">
+</div>
+<div style="margin-bottom:15px">
+<label for="auth-email">Email</label>
+<input id="auth-email" type="email" autocomplete="username" required>
+</div>
+<div style="margin-bottom:15px">
+<label for="auth-password">Password</label>
+<input id="auth-password" type="password" autocomplete="current-password" required>
+</div>
+<button id="auth-submit" class="primary" type="submit">Login</button>
+</form>
+<p id="auth-message" role="status"></p>
+</div>
+</div>
+
+<div id="app-view" class="layout hidden">
+<aside>
+<div class="brand">SpendWise</div>
+<div class="nav-item active">Dashboard</div>
+<div class="nav-item">Transactions</div>
+<p>Track your spending, one step at a time.</p>
+</aside>
+
+<main>
+<header>
+<div>
+<h1>Dashboard</h1>
+<p id="welcome" class="muted">Your money, organized.</p>
+</div>
+<div class="top-actions">
+<button id="refresh-btn" class="secondary" type="button">Refresh</button>
+<button id="logout-btn" class="secondary" type="button">Logout</button>
+</div>
+</header>
+
+<section class="cards">
+<div class="card"><p>All-time expenses</p><div class="amount" id="total">₹0.00</div></div>
+<div class="card"><p>Transactions</p><div class="amount" id="count">0</div></div>
+<div class="card"><p>Average expense</p><div class="amount" id="average">₹0.00</div></div>
+</section>
+
+<section class="panel">
+<div class="summary-header">
+<h2>Monthly spending</h2>
+<input id="summary-month" class="month-picker" type="month" aria-label="Choose month">
+</div>
+<div class="cards" style="margin-bottom:18px">
+<div class="card"><p>Selected month total</p><div class="amount" id="month-total">₹0.00</div></div>
+<div class="card"><p>Expenses this month</p><div class="amount" id="month-count">0</div></div>
+<div class="card"><p>Top category</p><div class="amount" id="top-category">—</div></div>
+</div>
+<h2 style="margin-top:6px">Category breakdown</h2>
+<div id="category-breakdown" class="category-list">
+<p class="empty">Your category breakdown will appear here.</p>
+</div>
+</section>
+
+<section class="panel">
+<h2 id="form-title">Add an expense</h2>
+<form id="expense-form">
+<div class="form-grid">
+<div>
+<label for="amount">Amount (₹)</label>
+<input id="amount" type="number" min="0.01" step="0.01" placeholder="e.g. 150" required>
+</div>
+<div>
+<label for="description">Description</label>
+<input id="description" type="text" maxlength="200" placeholder="e.g. Lunch" required>
+</div>
+<div>
+<label for="category">Category</label>
+<select id="category" required>
+<option value="Food">Food</option>
+<option value="Travel">Travel</option>
+<option value="Shopping">Shopping</option>
+<option value="Bills">Bills</option>
+<option value="Education">Education</option>
+<option value="Health">Health</option>
+<option value="Other" selected>Other</option>
+</select>
+</div>
+<div>
+<label for="payment">Payment method</label>
+<select id="payment" required>
+<option value="">Choose method</option>
+<option value="UPI">UPI</option>
+<option value="Cash">Cash</option>
+<option value="Card">Card</option>
+<option value="Net Banking">Net Banking</option>
+<option value="Other">Other</option>
+</select>
+</div>
+<div>
+<label for="date">Expense date</label>
+<input id="date" type="date" required>
+</div>
+</div>
+<div class="form-actions">
+<button id="save-expense" class="primary" type="submit">Add expense</button>
+<button id="cancel-edit" class="secondary hidden" type="button">Cancel edit</button>
+</div>
+</form>
+<p id="message" role="status"></p>
+</section>
+
+<section class="panel">
+<h2>Transactions</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Description</th><th>Category</th><th>Date</th>
+<th>Payment</th><th>Amount</th><th>Actions</th>
+</tr>
+</thead>
+<tbody id="transactions">
+<tr><td colspan="6" class="muted">Loading expenses...</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+let accessToken = null;
+let currentUser = null;
+let expenses = [];
+let editingId = null;
+let authMode = "login";
+
+const $ = id => document.getElementById(id);
+
+function showMessage(id,text,isError=false){
+const el=$(id);
+el.textContent=text;
+el.className=isError?"error":"success";
+}
+
+function localDate(){
+const now=new Date();
+return new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+
+function currentMonth(){return localDate().slice(0,7);}
+
+function money(value){
+return Number(value).toLocaleString("en-IN",{style:"currency",currency:"INR"});
+}
+
+async function request(path,options={},authenticated=true){
+const headers={...(options.headers||{})};
+if(options.body && !(options.body instanceof URLSearchParams)){
+headers["Content-Type"]="application/json";
+}
+if(authenticated && accessToken){
+headers["Authorization"]=`Bearer ${accessToken}`;
+}
+let response;
+try{
+response=await fetch(`${API}${path}`,{...options,headers});
+}catch{
+throw new Error("Cannot reach FastAPI. Check that the backend is running at "+API);
+}
+const text=await response.text();
+let data=null;
+try{data=text?JSON.parse(text):null;}catch{data=text;}
+if(!response.ok){
+if(response.status===401 && authenticated){
+accessToken=null;
+currentUser=null;
+showAuth();
+}
+const detail=data && typeof data==="object"?(data.detail||data.message):data;
+throw new Error(detail||`Request failed (${response.status})`);
+}
+return data;
+}
+
+function showAuth(){
+$("auth-view").classList.remove("hidden");
+$("app-view").classList.add("hidden");
+}
+function showApp(){
+$("auth-view").classList.add("hidden");
+$("app-view").classList.remove("hidden");
+}
+
+function setAuthMode(mode){
+authMode=mode;
+const registering=mode==="register";
+$("name-field").classList.toggle("hidden",!registering);
+$("auth-name").required=registering;
+$("auth-password").autocomplete=registering?"new-password":"current-password";
+$("auth-submit").textContent=registering?"Create account":"Login";
+$("login-tab").className=registering?"secondary":"primary";
+$("register-tab").className=registering?"primary":"secondary";
+$("auth-message").textContent="";
+}
+$("login-tab").addEventListener("click",()=>setAuthMode("login"));
+$("register-tab").addEventListener("click",()=>setAuthMode("register"));
+
+$("auth-form").addEventListener("submit",async event=>{
+event.preventDefault();
+const button=$("auth-submit");
+button.disabled=true;
+showMessage("auth-message","Please wait...");
+const email=$("auth-email").value.trim();
+const password=$("auth-password").value;
+try{
+if(authMode==="register"){
+const name=$("auth-name").value.trim();
+await request("/register",{method:"POST",body:JSON.stringify({name,email,password})},false);
+showMessage("auth-message","Registration successful. Logging you in...");
+}
+const form=new URLSearchParams();
+form.set("username",email);
+form.set("password",password);
+const result=await request("/login",{method:"POST",body:form},false);
+accessToken=result.access_token;
+currentUser=await request("/me");
+showApp();
+$("welcome").textContent=`Welcome, ${currentUser.name}!`;
+$("date").value=localDate();
+$("summary-month").value=currentMonth();
+await loadExpenses();
+}catch(error){
+showMessage("auth-message",error.message,true);
+}finally{
+button.disabled=false;
+}
+});
+
+async function loadExpenses(){
+const tbody=$("transactions");
+tbody.replaceChildren();
+const row=document.createElement("tr");
+const cell=document.createElement("td");
+cell.colSpan=6;
+cell.className="muted";
+cell.textContent="Loading expenses...";
+row.appendChild(cell);
+tbody.appendChild(row);
+try{
+expenses=await request("/expenses");
+renderExpenses();
+showMessage("message","Expenses loaded successfully.");
+}catch(error){
+showMessage("message",error.message,true);
+tbody.replaceChildren();
+}
+}
+
+function renderExpenses(){
+const total=expenses.reduce((sum,item)=>sum+Number(item.amount),0);
+$("total").textContent=money(total);
+$("count").textContent=expenses.length;
+$("average").textContent=money(expenses.length?total/expenses.length:0);
+renderTransactions();
+renderMonthlySummary();
+}
+
+function renderTransactions(){
+const tbody=$("transactions");
+tbody.replaceChildren();
+if(!expenses.length){
+const row=document.createElement("tr");
+const cell=document.createElement("td");
+cell.colSpan=6;
+cell.className="muted";
+cell.textContent="No expenses yet. Add your first expense above.";
+row.appendChild(cell);
+tbody.appendChild(row);
+return;
+}
+for(const item of expenses){
+const row=document.createElement("tr");
+[item.description,item.category||"Other",item.expense_date,item.payment_method,money(item.amount)].forEach(value=>{
+const cell=document.createElement("td");
+cell.textContent=value??"";
+row.appendChild(cell);
+});
+const actions=document.createElement("td");
+actions.className="actions";
+const edit=document.createElement("button");
+edit.className="secondary";
+edit.textContent="Edit";
+edit.type="button";
+edit.addEventListener("click",()=>startEdit(item.id));
+const remove=document.createElement("button");
+remove.className="danger";
+remove.textContent="Delete";
+remove.type="button";
+remove.addEventListener("click",()=>deleteExpense(item.id));
+actions.append(edit,remove);
+row.appendChild(actions);
+tbody.appendChild(row);
+}
+}
+
+function renderMonthlySummary(){
+const month=$("summary-month").value||currentMonth();
+const monthExpenses=expenses.filter(item=>String(item.expense_date).slice(0,7)===month);
+const total=monthExpenses.reduce((sum,item)=>sum+Number(item.amount),0);
+$("month-total").textContent=money(total);
+$("month-count").textContent=monthExpenses.length;
+
+const totalsByCategory={};
+monthExpenses.forEach(item=>{
+const category=item.category||"Other";
+totalsByCategory[category]=(totalsByCategory[category]||0)+Number(item.amount);
+});
+const categories=Object.entries(totalsByCategory).sort((a,b)=>b[1]-a[1]);
+$("top-category").textContent=categories.length?categories[0][0]:"—";
+const container=$("category-breakdown");
+container.replaceChildren();
+if(!categories.length){
+const empty=document.createElement("p");
+empty.className="empty";
+empty.textContent="No expenses recorded for this month.";
+container.appendChild(empty);
+return;
+}
+categories.forEach(([category,amount])=>{
+const row=document.createElement("div");
+row.className="category-row";
+const label=document.createElement("div");
+label.textContent=category;
+const track=document.createElement("div");
+track.className="bar-track";
+const fill=document.createElement("div");
+fill.className="bar-fill";
+fill.style.width=`${total>0?(amount/total)*100:0}%`;
+track.appendChild(fill);
+const value=document.createElement("div");
+value.className="category-value";
+value.textContent=`${money(amount)} (${Math.round(amount/total*100)}%)`;
+row.append(label,track,value);
+container.appendChild(row);
+});
+}
+$("summary-month").addEventListener("change",renderMonthlySummary);
+
+function startEdit(id){
+const item=expenses.find(expense=>expense.id===id);
+if(!item)return;
+editingId=id;
+$("amount").value=item.amount;
+$("description").value=item.description;
+$("category").value=item.category||"Other";
+$("payment").value=item.payment_method;
+$("date").value=item.expense_date;
+$("form-title").textContent="Edit expense";
+$("save-expense").textContent="Save changes";
+$("cancel-edit").classList.remove("hidden");
+$("amount").focus();
+showMessage("message",`Editing expense #${id}.`);
+}
+
+function resetExpenseForm(){
+editingId=null;
+$("expense-form").reset();
+$("category").value="Other";
+$("date").value=localDate();
+$("form-title").textContent="Add an expense";
+$("save-expense").textContent="Add expense";
+$("cancel-edit").classList.add("hidden");
+}
+
+$("cancel-edit").addEventListener("click",()=>{
+resetExpenseForm();
+showMessage("message","Edit cancelled.");
+});
+
+$("expense-form").addEventListener("submit",async event=>{
+event.preventDefault();
+const amount=Number($("amount").value);
+const description=$("description").value.trim();
+const category=$("category").value;
+const payment_method=$("payment").value;
+const expense_date=$("date").value;
+if(!Number.isFinite(amount)||amount<=0){
+showMessage("message","Enter an amount greater than zero.",true);
+return;
+}
+if(!description||!category||!payment_method||!expense_date){
+showMessage("message","Please fill in all expense fields.",true);
+return;
+}
+const payload={amount,description,category,payment_method,expense_date};
+const button=$("save-expense");
+button.disabled=true;
+try{
+if(editingId!==null){
+await request(`/expenses/${editingId}`,{method:"PUT",body:JSON.stringify(payload)});
+showMessage("message","Expense updated successfully.");
+}else{
+await request("/expenses",{method:"POST",body:JSON.stringify(payload)});
+showMessage("message","Expense added successfully.");
+}
+resetExpenseForm();
+await loadExpenses();
+}catch(error){
+showMessage("message",error.message,true);
+}finally{
+button.disabled=false;
+}
+});
+
+async function deleteExpense(id){
+const item=expenses.find(expense=>expense.id===id);
+if(!item||!confirm(`Delete "${item.description}" (${money(item.amount)})?`))return;
+try{
+await request(`/expenses/${id}`,{method:"DELETE"});
+if(editingId===id)resetExpenseForm();
+await loadExpenses();
+showMessage("message","Expense deleted successfully.");
+}catch(error){
+showMessage("message",error.message,true);
+}
+}
+
+$("refresh-btn").addEventListener("click",loadExpenses);
+$("logout-btn").addEventListener("click",()=>{
+accessToken=null;
+currentUser=null;
+expenses=[];
+resetExpenseForm();
+$("auth-form").reset();
+setAuthMode("login");
+showAuth();
+});
+
+$("date").value=localDate();
+$("summary-month").value=currentMonth();
+setAuthMode("login");
+</script>
+</body>
+</html>
